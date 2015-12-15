@@ -1,14 +1,15 @@
-/* compiles with command line  gcc xlibdemo.c -lX11 -lm -L/usr/X11R6/lib */
+/* compiles with command line  gcc test.c -lX11 -lm -L/usr/X11R6/XSetLineAttributes */
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/Xatom.h>
 #include <stdio.h>
 #include <math.h>
-
-int orientation(XPoint a, XPoint b, XPoint c);
-bool intersect_test(XPoint p,XPoint q, XPoint r, XPoint s);
-
+/*
+typedef struct {
+  short x, y;
+} XPoint;
+*/
 Display *display_ptr;
 Screen *screen_ptr;
 int screen_num;
@@ -38,51 +39,19 @@ XColor tmp_color1, tmp_color2;
 
 int main(int argc, char **argv)
 {
-  int i,point_count;
-  int v1x, v1y, v2x, v2y, v3x, v3y;
-  int max_x, max_y = 0;
-  float boundary_x, boundary_y = 0;
+  int i;
   XPoint triangle_points[1000];
-  char* filename = argv[1];  
+  char* filename = argv[1];
+  int v1x, v1y, v2x, v2y, v3x, v3y;
   FILE *fp;
 
   /* open file and scan for triangle vertices*/
   fp = fopen(filename,"r");
-
-  i = 0;
-  point_count = 0;
-  while(fscanf(fp, "T (%d,%d) (%d,%d) (%d,%d)\n", &v1x, &v1y, &v2x, &v2y, &v3x, &v3y) != EOF){
+  fscanf(fp, "T (%d,%d) (%d,%d) (%d,%d)", &v1x, &v1y, &v2x, &v2y, &v3x, &v3y);
+  
+  for(i=0;i<3;i++){
     triangle_points[i].x = v1x;
-    triangle_points[i].y = v1y; 
-    point_count++; i++;
-    triangle_points[i].x = v2x;
-    triangle_points[i].y = v2y;
-    point_count++; i++; 
-    triangle_points[i].x = v3x;
-    triangle_points[i].y = v3y;
-    point_count++; i++;
-  }
-
-  //determine maximum x and y values
-  for(i=0;i<point_count;i++){
-    if(triangle_points[i].x>max_x){
-      max_x = triangle_points[i].x;
-    }
-    if(triangle_points[i].y>max_y){
-      max_y = triangle_points[i].y;
-    }
-  }
-
-  //add 10% of maximum to all points
-  boundary_x = max_x * 0.1;
-  boundary_y = max_y * 0.1;
-  for(i=0;i<point_count;i++){
-    triangle_points[i].x += boundary_x;
-    triangle_points[i].y += boundary_y;
-  }
-
-  for(i=0;i<point_count;i++){
-    printf("x = %d, y = %d", triangle_points[i].x, triangle_points[i].y);
+    triangle_points[i].y = v1y;
   }
 
 
@@ -148,13 +117,13 @@ int main(int argc, char **argv)
   /* create graphics context, so that we may draw in this window */
   gc = XCreateGC( display_ptr, win, valuemask, &gc_values);
   XSetForeground( display_ptr, gc, BlackPixel( display_ptr, screen_num ) );
-  XSetLineAttributes( display_ptr, gc, 2, LineSolid, CapRound, JoinRound);
+  XSetLineAttributes( display_ptr, gc, 4, LineSolid, CapRound, JoinRound);
 
   /* and three other graphics contexts, to draw in yellow and red and grey*/
   gc_yellow = XCreateGC( display_ptr, win, valuemask, &gc_yellow_values);
   XSetLineAttributes(display_ptr, gc_yellow, 6, LineSolid,CapRound, JoinRound);
   if( XAllocNamedColor( display_ptr, color_map, "yellow", 
-      &tmp_color1, &tmp_color2 ) == 0 )
+			&tmp_color1, &tmp_color2 ) == 0 )
     {printf("failed to get color yellow\n"); exit(-1);} 
   else
     XSetForeground( display_ptr, gc_yellow, tmp_color1.pixel );
@@ -162,14 +131,14 @@ int main(int argc, char **argv)
   gc_red = XCreateGC( display_ptr, win, valuemask, &gc_red_values);
   XSetLineAttributes( display_ptr, gc_red, 6, LineSolid, CapRound, JoinRound);
   if( XAllocNamedColor( display_ptr, color_map, "red", 
-      &tmp_color1, &tmp_color2 ) == 0 )
+			&tmp_color1, &tmp_color2 ) == 0 )
     {printf("failed to get color red\n"); exit(-1);} 
   else
     XSetForeground( display_ptr, gc_red, tmp_color1.pixel );
 
   gc_grey = XCreateGC( display_ptr, win, valuemask, &gc_grey_values);
   if( XAllocNamedColor( display_ptr, color_map, "light grey", 
-      &tmp_color1, &tmp_color2 ) == 0 )
+			&tmp_color1, &tmp_color2 ) == 0 )
     {printf("failed to get color grey\n"); exit(-1);} 
   else
     XSetForeground( display_ptr, gc_grey, tmp_color1.pixel );
@@ -178,16 +147,14 @@ int main(int argc, char **argv)
   while(1)
     { XNextEvent( display_ptr, &report );
       switch( report.type )
-  {
-  case Expose:
+	{
+	case Expose:
           /* (re-)draw the example figure. This event happens
              each time some part ofthe window gets exposed (becomes visible) */
     //XDrawLine(display_ptr,drawable,gc,x1,y1,x2,y2)
-  for(i=0;i<point_count;i+=3){
-    XDrawLine(display_ptr, win, gc, triangle_points[i].x, triangle_points[i].y, triangle_points[i+1].x, triangle_points[i+1].y);
-    XDrawLine(display_ptr, win, gc, triangle_points[i+1].x, triangle_points[i+1].y, triangle_points[i+2].x, triangle_points[i+2].y );
-    XDrawLine(display_ptr, win, gc, triangle_points[i].x, triangle_points[i].y, triangle_points[i+2].x, triangle_points[i+2].y);
-  }
+	XDrawLine(display_ptr, win, gc, triangle_points[0].x, triangle_points[0].y, v2x, v2y );
+	XDrawLine(display_ptr, win, gc, v1x, v1y, v3x, v3y );
+    XDrawLine(display_ptr, win, gc, v2x, v2y, v3x, v3y );
     
 
           break;
@@ -200,41 +167,28 @@ int main(int argc, char **argv)
           /* This event happens when the user pushes a mouse button. I draw
             a circle to show the point where it happened, but do not save 
             the position; so when the next redraw event comes, these circles
-      disappear again. */
+	    disappear again. */
           {  
              int x, y;
-         x = report.xbutton.x;
+  	     x = report.xbutton.x;
              y = report.xbutton.y;
              if (report.xbutton.button == Button1 )
-          XFillArc( display_ptr, win, gc_red, 
+	        XFillArc( display_ptr, win, gc_red, 
                        x -win_height/40, y- win_height/40,
-                       win_height/40, win_height/40, 0, 360*64);
+                       win_height/20, win_height/20, 0, 360*64);
              else
-          XFillArc( display_ptr, win, gc_yellow, 
+	        XFillArc( display_ptr, win, gc_yellow, 
                        x - win_height/40, y - win_height/40,
                        win_height/20, win_height/20, 0, 360*64);
 
           }
           break;
         default:
-    /* this is a catch-all for other events; it does not do anything.
+	  /* this is a catch-all for other events; it does not do anything.
              One could look at the report type to see what the event was */ 
           break;
-  }
+	}
 
     }
   exit(0);
-}
-
-int orientation(XPoint a, XPoint b, XPoint c){
-  return (a.x*b.y + b.x*c.y + c.x*a.y - a.y*b.x - b.y*c.x - c.y*a.x);
-}
-
-int intersect_test(XPoint p,XPoint q, XPoint r, XPoint s){
-  if( orientation(p,q,r) * orientation(p,q,s) < 0 && orientation(r,s,p) * orientation(r,s,q) < 0){
-    return 1;
-  }
-  else{
-    return 0;
-  }
 }

@@ -5,6 +5,9 @@
 #include <X11/Xatom.h>
 #include <stdio.h>
 #include <math.h>
+#include <limits.h>
+
+#define MAXPOINTS 1000
 
 typedef struct Triangles{
     XPoint a;
@@ -15,6 +18,8 @@ typedef struct Triangles{
 int orientation(XPoint a, XPoint b, XPoint c);
 int intersect_test(XPoint p,XPoint q, XPoint r, XPoint s);
 int euclid_distance(XPoint a, XPoint b);
+void dijkstra(int graph[MAXPOINTS][MAXPOINTS], int parent[MAXPOINTS], int src, int point_count);
+int minDistance(int dist[], int sptSet[], int point_count);
 
 Display *display_ptr;
 Screen *screen_ptr;
@@ -49,9 +54,11 @@ int main(int argc, char **argv)
   int v1x, v1y, v2x, v2y, v3x, v3y;
   int max_x, max_y = 0;
   float boundary_x, boundary_y = 0;
-  XPoint points[1000];
+  XPoint points[MAXPOINTS];
+  int graph[MAXPOINTS][MAXPOINTS];
+  int parent[MAXPOINTS];
   XPoint a,b,c,p,q;
-  Triangle triangle_points[1000];
+  Triangle triangle_points[MAXPOINTS];
   char* filename = argv[1];  
   FILE *fp;
   
@@ -104,9 +111,15 @@ int main(int argc, char **argv)
     triangle_points[i].c = points[i+2];
     triangle_count++;
   }
+  /*
+  for(i=0;i<point_count;i++){
+    for(j=0;j<point_count;j++){
+      printf("%d %d:%d \n",i,j,euclid_distance(points[i],points[j]));
+    }
+  }
+  */
   
-  int graph[point_count+2][point_count+2];
-  
+
   printf("triange a:(%d,%d)", triangle_points[0].a.x, triangle_points[0].a.y );
   /* opening display: basic connection to X Server */
   if( (display_ptr = XOpenDisplay(display_name)) == NULL )
@@ -208,6 +221,7 @@ int main(int argc, char **argv)
              XPoint clicked;
              x = report.xbutton.x;
              y = report.xbutton.y;
+             printf("%d %d \n",x,y);
              clicked.x = x;
              clicked.y = y;
              if (report.xbutton.button == Button1 ){
@@ -219,6 +233,7 @@ int main(int argc, char **argv)
                 point_count++;
                 click_count++;
               }
+
               else if(click_count == 1){
                 XFillArc( display_ptr, win, gc_red, 
                           x -win_height/40, y- win_height/40,
@@ -239,19 +254,18 @@ int main(int argc, char **argv)
                       b = triangle_points[t].b;
                       c = triangle_points[t].c;
                       if(intersect_test(p,q,a,b) || intersect_test(p,q,a,c) || intersect_test(p,q,b,c)){
-                        printf("Intersection \n");
                         break;
                       } 
                     }
-                  // if no intersection exists, add edge to graph
-                  if(t == triangle_count){
-
-                  }
+                    // if no intersection exists, add edge to graph
+                    if(t == triangle_count){
+                      graph[i][j] = euclid_distance(p,q);
+                    }
                   }
                 }
+                dijkstra(graph,parent,point_count-2, point_count);
               }
-
-            }
+            }  
           }
           break;
         default:
@@ -278,7 +292,62 @@ int intersect_test(XPoint p,XPoint q, XPoint r, XPoint s){
 }
 
 int euclid_distance(XPoint a, XPoint b){
+  int x_term, y_term;
   x_term = a.x - b.x;
   y_term = a.y - b.y;
   return (int) sqrt(x_term*x_term + y_term * y_term);  
+}
+
+int minDistance(int dist[], int sptSet[], int point_count)
+{
+   // Initialize min value
+   int min = INT_MAX, min_index;
+   int i;
+   for ( i = 0; i < point_count; i++)
+     if (sptSet[i] == 1 && dist[i] <= min)
+         min = dist[i], min_index = i;
+ 
+   return min_index;
+}
+
+void dijkstra(int graph[MAXPOINTS][MAXPOINTS], int parent[MAXPOINTS], int src, int point_count)
+{
+     int i,count;
+     int dist[point_count];     // The output array.  dist[i] will hold the shortest
+                      // distance from src to i
+ 
+     int sptSet[point_count]; // sptSet[i] will true if vertex i is included in shortest
+                     // path tree or shortest distance from src to i is finalized
+ 
+     // Initialize all distances as INFINITE and stpSet[] as false
+     for (i = 0; i < point_count; i++)
+        dist[i] = INT_MAX, sptSet[i] = 0;
+ 
+     // Distance of source vertex from itself is always 0
+     dist[src] = 0;
+ 
+     // Find shortest path for all vertices
+     for (count = 0; count < point_count-1; count++)
+     {
+       // Pick the minimum distance vertex from the set of vertices not
+       // yet processed. u is always equal to src in first iteration.
+      
+      int u = minDistance(dist, sptSet, point_count);
+ 
+      // Mark the picked vertex as processed
+      sptSet[u] = 1;
+ 
+      // Update dist value of the adjacent vertices of the picked vertex.
+      for (i = 0; i < point_count; i++)
+ 
+         // Update dist[v] only if is not in sptSet, there is an edge from 
+         // u to v, and total weight of path from src to  v through u is 
+         // smaller than current value of dist[v]
+         if (!sptSet[i] && graph[u][i] && dist[u] != INT_MAX 
+                                       && dist[u]+graph[u][i] < dist[i]){
+            //parent[i] = u;
+            dist[i] = dist[u] + graph[u][i];
+        }
+     }
+
 }

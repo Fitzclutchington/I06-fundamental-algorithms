@@ -25,7 +25,8 @@ int intersect_test(XPoint p,XPoint q, XPoint r, XPoint s);
 int euclid_distance(XPoint a, XPoint b);
 int minDistance(int dist[], int processed[], int point_count);
 void dijkstra(int graph[MAXPOINTS][MAXPOINTS], int parent[], int src, int point_count);
-int in_triangle(XPoint a);
+int in_triangle(XPoint x, Triangle t);
+int segment_in_triangle(XPoint x, XPoint y, Triangle t);
 
 
 Display *display_ptr;
@@ -67,6 +68,7 @@ int main(int argc, char **argv)
   int parent[MAXPOINTS];
   XPoint a,b,c,p,q,point_a,point_b;
   Triangle triangle_points[MAXPOINTS];
+  Triangle tri;
   char* filename = argv[1];  
   FILE *fp;
   
@@ -233,23 +235,38 @@ int main(int argc, char **argv)
              y = report.xbutton.y;
              clicked.x = x;
              clicked.y = y;
-             click_count++;
+             
              if (report.xbutton.button == Button1 ){
-              if(in_triangle(clicked)){
+
+              //first check if clcked point in triangle
+              // if it is don't draw
+              intersect = 0;
+              for(t=0;t<triangle_count;t++){
+                  tri = triangle_points[t];
+                  if(in_triangle(clicked,tri)){
+                    intersect = 1;
+                    } 
+                  }
+              if(intersect){
                 continue;
               }
-              else if(click_count%2== 1){
+
+              // draw first point
+              else if(click_count%2== 0){
+                click_count++;
                 XFillArc( display_ptr, win, gc_red, 
-                          x -win_height/40, y- win_height/40,
-                          win_height/40, win_height/40, 0, 360*64);
+                          x -win_height/60, y- win_height/60,
+                          win_height/60, win_height/60, 0, 360*64);
                 points[point_count] = clicked;
                 point_count++;
               }
-
-              else if(click_count%2 ==0){
+              
+              // draw second point and path connecting to source
+              else if(click_count%2 ==1){
+                click_count++;
                 XFillArc( display_ptr, win, gc_red, 
-                          x -win_height/40, y- win_height/40,
-                          win_height/40, win_height/40, 0, 360*64);
+                          x -win_height/60, y- win_height/60,
+                          win_height/60, win_height/60, 0, 360*64);
                 points[point_count] = clicked;
                 point_count++;
 
@@ -265,10 +282,8 @@ int main(int argc, char **argv)
                       a = triangle_points[t].a;
                       b = triangle_points[t].b;
                       c = triangle_points[t].c;
-                      //printf("triangle:%d ax:%d ay:%d \n",t,a.x,a.y);
-                      //printf("triangle:%d bx:%d by:%d \n",t,b.x,b.y);
-                      //printf("triangle:%d cx:%d cy:%d \n",t,b.x,c.y);
-                      if(intersect_test(p,q,a,b) || intersect_test(p,q,a,c) || intersect_test(p,q,b,c)){
+                      if(intersect_test(p,q,a,b) || intersect_test(p,q,a,c) || intersect_test(p,q,b,c)
+                        || segment_in_triangle(p,q,triangle_points[t])){
                         intersect = 1;
                       } 
                     }
@@ -395,4 +410,25 @@ void dijkstra(int graph[MAXPOINTS][MAXPOINTS], int parent[], int src, int point_
      
    }
 
+int in_triangle(XPoint x,Triangle t){
+  XPoint a,b,c;
+  a = t.a;
+  b = t.b;
+  c = t.c;
+  if( orientation(x,a,b) * orientation(c,a,b) > 0 && orientation(x,b,c) * orientation(a,b,c) > 0 && orientation(x,a,c) * orientation(b,a,c) > 0){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
+
+int segment_in_triangle(XPoint x, XPoint y, Triangle t){
+  if(in_triangle(x,t) || in_triangle(y,t)){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
 

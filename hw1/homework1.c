@@ -20,7 +20,7 @@ typedef struct Triangles{
     XPoint c;
 } Triangle;
 
-int orientation(XPoint a, XPoint b, XPoint c);
+double orientation(XPoint a, XPoint b, XPoint c);
 int intersect_test(XPoint p,XPoint q, XPoint r, XPoint s);
 int euclid_distance(XPoint a, XPoint b);
 int minDistance(int dist[], int processed[], int point_count);
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
   Triangle triangle_points[MAXPOINTS];
   Triangle tri;
   char* filename = argv[1];  
-  FILE *fp;
+  FILE *fp,*f;
   
 
   /* open file and scan for triangle vertices*/
@@ -110,8 +110,8 @@ int main(int argc, char **argv)
   boundary_x = max_x * 0.1;
   boundary_y = max_y * 0.1;
   for(i=0;i<point_count;i++){
-    points[i].x += boundary_x;
-    points[i].y += boundary_y;
+    points[i].x += 20;
+    points[i].y += 20;
   }
   
   //create array of triangles to keep track of line segments 
@@ -124,7 +124,8 @@ int main(int argc, char **argv)
     j++;
     triangle_count++;
   }
-
+  
+  
   // parent keeps track of a nodes parent
   // initalize so no node has parent
   for(i=0;i<MAXPOINTS;i++){
@@ -269,6 +270,8 @@ int main(int argc, char **argv)
                           win_height/60, win_height/60, 0, 360*64);
                 points[point_count] = clicked;
                 point_count++;
+                
+            
 
                 // build graph
                 //  iterate through all pairs of points
@@ -282,19 +285,30 @@ int main(int argc, char **argv)
                       a = triangle_points[t].a;
                       b = triangle_points[t].b;
                       c = triangle_points[t].c;
+                      
                       if(intersect_test(p,q,a,b) || intersect_test(p,q,a,c) || intersect_test(p,q,b,c)
-                        || segment_in_triangle(p,q,triangle_points[t])){
+                         ||segment_in_triangle(p,q,triangle_points[t])){
                         intersect = 1;
-                      } 
+                        
+                       }
+
                     }
+                    
                     // if no intersection exists, add edge to graph
                   if(!intersect){
+                    //printf("no intersect %d:(%d,%d) and %d:(%d,%d), dist = %d\n",i,p.x,p.y,j,q.x,q.y,euclid_distance(p,q));
                     graph[i][j] = euclid_distance(p,q);
                   }
                   intersect = 0;
                   }
                 }        
-
+                f = fopen("graph.txt","w");
+                for(i=0;i<point_count;i++){
+                  for(j=0;j<point_count;j++){
+                    fprintf(f,"%d ",graph[i][j]);
+                  }
+                  fprintf(f,"\n");
+                }
                 // Compute shortest path
                 dijkstra(graph,parent,point_count-2, point_count);
                 
@@ -344,12 +358,13 @@ int main(int argc, char **argv)
   exit(0);
 }
 
-int orientation(XPoint a, XPoint b, XPoint c){
-  return (a.x*b.y + b.x*c.y + c.x*a.y - a.y*b.x - b.y*c.x - c.y*a.x);
+double orientation(XPoint a, XPoint b, XPoint c){
+  double result = (a.x*b.y + b.x*c.y + c.x*a.y - a.y*b.x - b.y*c.x - c.y*a.x);
+  return result;
 }
 
 int intersect_test(XPoint p,XPoint q, XPoint r, XPoint s){
-  if( orientation(p,q,r) * orientation(p,q,s) < 0 && orientation(r,s,p) * orientation(r,s,q) < 0){
+  if( (orientation(p,q,r) * orientation(p,q,s) < 0) && (orientation(r,s,p) * orientation(r,s,q) < 0)){
     return 1;
   }
   else{
@@ -399,7 +414,7 @@ void dijkstra(int graph[MAXPOINTS][MAXPOINTS], int parent[], int src, int point_
      
        for ( v = 0; v < point_count; v++){ 
          
-         if (!processed[v] && graph[u][v] && distance[u] != INT_MAX && distance[u]+graph[u][v] < distance[v]){
+         if (!processed[v] && graph[u][v] && distance[u] != INT_MAX && distance[u] +graph[u][v] < distance[v]){
 
             distance[v] = distance[u] + graph[u][v];
             parent[v] = u;
@@ -407,7 +422,6 @@ void dijkstra(int graph[MAXPOINTS][MAXPOINTS], int parent[], int src, int point_
       }
       
      }
-     
    }
 
 int in_triangle(XPoint x,Triangle t){
@@ -415,7 +429,7 @@ int in_triangle(XPoint x,Triangle t){
   a = t.a;
   b = t.b;
   c = t.c;
-  if( orientation(x,a,b) * orientation(c,a,b) > 0 && orientation(x,b,c) * orientation(a,b,c) > 0 && orientation(x,a,c) * orientation(b,a,c) > 0){
+  if( (orientation(x,a,b) * orientation(c,a,b) > 0) && (orientation(x,b,c) * orientation(a,b,c) > 0) && (orientation(x,a,c) * orientation(b,a,c) > 0)){
     return 1;
   }
   else{
@@ -431,4 +445,3 @@ int segment_in_triangle(XPoint x, XPoint y, Triangle t){
     return 0;
   }
 }
-

@@ -72,7 +72,7 @@ int main(int argc, char **argv)
   char* filename = argv[1];  
   FILE *fp,*f;
   
-
+  printf("%d \n",argc);
   /* open file and scan for triangle vertices*/
   fp = fopen(filename,"r");
   

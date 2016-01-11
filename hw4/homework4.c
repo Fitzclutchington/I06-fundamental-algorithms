@@ -43,8 +43,9 @@ XColor tmp_color1, tmp_color2;
 
 int main(int argc, char **argv)
 {
-  int i,j,point_count=0,click_count=0,cmd_file=0;
+  int i,j,x,y,point_count=0,click_count=0,cmd_file=0;
   int v1x, v1y;
+  XPoint clicked;
   XPoint points[MAXPOINTS];
   XPoint draw_points[MAXPOINTS];
   int graph[MAXPOINTS][MAXPOINTS];
@@ -56,6 +57,7 @@ int main(int argc, char **argv)
   /* open file and scan for triangle vertices*/
   if(argc == 2){
     cmd_file = 1;
+    filename = argv[1];
     fp = fopen(filename,"r");
     
     if (fp == NULL){
@@ -67,8 +69,8 @@ int main(int argc, char **argv)
     i = 0;
     point_count = 0;
     while(fscanf(fp, "%d %d\n", &v1x, &v1y) != EOF){
-      points[i].x = v1x;
-      points[i].y = v1y; 
+      points[i].x = v1x + 20;
+      points[i].y = v1y + 20; 
       point_count++; i++;
     }
   }
@@ -156,10 +158,21 @@ int main(int argc, char **argv)
              each time some part ofthe window gets exposed (becomes visible) */
     //XDrawLine(display_ptr,drawable,gc,x1,y1,x2,y2)
     if(cmd_file){
-      for(i=0;i<point_count;i+=3){
-        XDrawLine(display_ptr, win, gc, points[i].x, points[i].y, points[i+1].x, points[i+1].y);
-        XDrawLine(display_ptr, win, gc, points[i+1].x, points[i+1].y, points[i+2].x, points[i+2].y );
-        XDrawLine(display_ptr, win, gc, points[i].x, points[i].y, points[i+2].x, points[i+2].y);
+      for(i=0;i<point_count;i++){
+        x = points[i].x;
+        y = points[i].y;
+        XFillArc( display_ptr, win, gc, 
+                x -win_height/100, y- win_height/100,
+                win_height/100, win_height/100, 0, 360*64);
+      }
+      if(point_count>= 2){
+        for(i=0;i<point_count;i++){
+          for(j=0;j<point_count;j++){
+            if(i != j){
+              XDrawLine(display_ptr, win, gc, points[i].x, points[i].y, points[j].x, points[j].y);
+            }
+          }
+        }
       }
     }
     break;
@@ -171,9 +184,6 @@ int main(int argc, char **argv)
     break;
   case ButtonPress: 
     {
-    //get mouse click
-    int x, y;
-    XPoint clicked;
     x = report.xbutton.x;
     y = report.xbutton.y;
     clicked.x = x;
